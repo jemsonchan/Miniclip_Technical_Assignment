@@ -1,0 +1,48 @@
+{
+  "experiment": {
+    "id": "econ_summer_2026",
+    "sticky": true,
+    "groups": [
+      { "id": "control",   "weight": 0.5 },
+      { "id": "variant_a", "weight": 0.25 },
+      { "id": "variant_b", "weight": 0.25 }
+    ],
+    "segment_rules": [
+      {
+        "group": "variant_b",
+        "require": { "country": ["US", "CA"], "min_level": 5 }
+      }
+    ],
+    "analytics_requirements": {
+      "exposure": {
+        "required_properties": ["user_id", "group", "experiment_id", "ts"]
+      },
+      "economy_transaction": {
+        "required_properties": ["user_id", "group", "item_id", "currency", "amount", "balance_after", "ts"]
+      }
+    }
+  },
+  "economy": {
+    "currencies": ["coins", "gems"],
+    "starting_balance": { "coins": 150, "gems": 0 },
+    "items": [
+      { "id": "starter_pack", "cost": { "coins": 100 }, "reward": { "gems": 5 } },
+      { "id": "gem_bundle",   "cost": { "gems": 50 },   "reward": { "coins": 400 } },
+      { "id": "sword",        "cost": { "coins": 80 } }
+    ],
+    "conversions": [
+      { "from": "gems",  "to": "coins", "rate": 100 },
+      { "from": "coins", "to": "gems",  "rate": 0.01 }
+    ],
+    "per_group_overrides": {
+      "variant_a": {
+        "items": {
+          "sword": { "cost": { "coins": 60 } }
+        }
+      }
+    }
+  },
+  "defaults": {
+    "on_fetch_failure": "use_control"
+  }
+}

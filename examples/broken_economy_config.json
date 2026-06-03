@@ -1,0 +1,32 @@
+{
+  "_note": "Deliberately broken config #2 -- exercises the STATIC economy-layer checks. Run: python -m tripwire check --config examples/broken_economy_config.json",
+  "experiment": {
+    "id": "broken_economy",
+    "sticky": true,
+    "groups": [
+      { "id": "control",   "weight": 0.5 },
+      { "id": "variant_a", "weight": 0.5 }
+    ]
+  },
+  "economy": {
+    "currencies": ["coins", "gems"],
+    "starting_balance": { "coins": 100, "gems": 10 },
+    "items": [
+      { "id": "magic_ring", "cost": { "rubies": 50 } },
+      { "id": "free_gold",  "cost": { "coins": -25 } },
+      { "id": "coin_press", "cost": { "coins": 100 }, "reward": { "coins": 150 } },
+      { "id": "sword",      "cost": { "coins": 80 } }
+    ],
+    "conversions": [
+      { "from": "gems",  "to": "coins", "rate": 100 },
+      { "from": "coins", "to": "gems",  "rate": 0.02 }
+    ],
+    "per_group_overrides": {
+      "ghost_group": { "items": { "sword": { "cost": { "coins": 40 } } } },
+      "variant_a":   { "items": { "phantom_item": { "cost": { "coins": 5 } } } }
+    }
+  },
+  "defaults": {
+    "on_fetch_failure": "use_last_known_good"
+  }
+}

@@ -1,0 +1,25 @@
+{"event": "exposure", "event_id": "e0001", "user_id": "u1", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000100, "country": "US", "level": 10, "platform": "ios"}
+{"event": "economy_transaction", "event_id": "e0002", "user_id": "u1", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000200, "item_id": "starter_pack", "currency": "coins", "amount": -100, "balance_after": 50, "kind": "purchase"}
+{"event": "exposure", "event_id": "e0003", "user_id": "u1", "experiment_id": "econ_summer_2026", "group": "variant_a", "ts": 1700000900, "country": "US", "level": 10, "platform": "ios"}
+{"event": "exposure", "event_id": "e0004", "user_id": "u2", "experiment_id": "econ_summer_2026", "group": "variant_a", "ts": 1700000110, "country": "US", "level": 8, "platform": "android"}
+{"event": "economy_transaction", "event_id": "e0005", "user_id": "u2", "experiment_id": "econ_summer_2026", "group": "variant_a", "ts": 1700000210, "item_id": "sword", "currency": "coins", "amount": -60, "balance_after": 90, "kind": "purchase"}
+{"event": "exposure", "event_id": "e0006", "user_id": "u3", "experiment_id": "econ_summer_2026", "group": "variant_b", "ts": 1700000120, "country": "US", "level": 2, "platform": "ios"}
+{"event": "exposure", "event_id": "e0007", "user_id": "u4", "experiment_id": "econ_summer_2026", "group": "variant_b", "ts": 1700000130, "country": "DE", "level": 7, "platform": "android"}
+{"event": "exposure", "event_id": "e0008", "user_id": "u5", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000140, "country": "GB", "level": 5, "platform": "ios"}
+{"event": "economy_transaction", "event_id": "e0009", "user_id": "u5", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000240, "item_id": "starter_pack", "currency": "coins", "amount": -107, "balance_after": 43, "kind": "purchase"}
+{"event": "economy_transaction", "event_id": "e0010", "user_id": "u6", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000160, "item_id": "sword", "currency": "coins", "amount": -80, "balance_after": 70, "kind": "purchase"}
+{"event": "exposure", "event_id": "e0011", "user_id": "u7", "experiment_id": "econ_summer_2026", "group": "variant_c", "ts": 1700000170, "country": "US", "level": 11, "platform": "ios"}
+{"event": "exposure", "event_id": "e0012", "user_id": "u8", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000180, "country": "US", "level": 6, "platform": "android"}
+{"event": "exposure", "event_id": "e0013", "user_id": "u8", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000800, "country": "US", "level": 6, "platform": "android"}
+{"event": "exposure", "event_id": "e0014", "user_id": "u9", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000190, "country": "US", "level": 12, "platform": "ios"}
+{"event": "economy_transaction", "event_id": "e0015", "user_id": "u9", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000290, "item_id": "starter_pack", "currency": "coins", "amount": -100, "balance_after": 999, "kind": "purchase"}
+{"event": "economy_transaction", "event_id": "e0016", "user_id": "u10", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000050, "item_id": "starter_pack", "currency": "coins", "amount": -100, "balance_after": 50, "kind": "purchase"}
+{"event": "exposure", "event_id": "e0017", "user_id": "u10", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000500, "country": "US", "level": 9, "platform": "ios"}
+{"event": "exposure", "event_id": "e0018", "user_id": "u11", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000210, "country": "US", "level": 10, "platform": "ios"}
+{"event": "economy_transaction", "event_id": "e0019", "user_id": "u11", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000310, "item_id": "gem_bundle", "currency": "gems", "amount": -50, "balance_after": -50, "kind": "purchase"}
+{"event": "exposure", "event_id": "e0020", "user_id": "u12", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000220, "country": "US", "level": 14, "platform": "android"}
+{"event": "economy_transaction", "event_id": "e0021", "user_id": "u12", "experiment_id": "econ_summer_2026", "ts": 1700000320, "item_id": "starter_pack", "currency": "coins", "amount": -100, "balance_after": 50, "kind": "purchase"}
+{"event": "exposure", "event_id": "e0022", "user_id": "u13", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000230, "country": "JP", "level": 3, "platform": "ios"}
+{"event": "exposure", "event_id": "e0023", "user_id": "u14", "experiment_id": "econ_summer_2026", "group": "variant_a", "ts": 1700000240, "country": "BR", "level": 20, "platform": "android"}
+{"event": "exposure", "event_id": "e0024", "user_id": "u15", "experiment_id": "econ_summer_2026", "group": "variant_b", "ts": 1700000250, "country": "CA", "level": 18, "platform": "ios"}
+{"event": "exposure", "event_id": "e0025", "user_id": "u16", "experiment_id": "econ_summer_2026", "group": "control", "ts": 1700000260, "country": "US", "level": 7, "platform": "ios"}

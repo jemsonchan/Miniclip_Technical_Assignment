@@ -1,0 +1,32 @@
+{
+  "_note": "Deliberately broken config #1 -- exercises the STATIC experiment-layer checks. Run: python -m tripwire check --config examples/broken_weights_config.json",
+  "experiment": {
+    "id": "broken_weights",
+    "sticky": true,
+    "groups": [
+      { "id": "control",   "weight": 0.5 },
+      { "id": "variant_a", "weight": 0.3 },
+      { "id": "variant_b", "weight": 0.4 },
+      { "id": "variant_c", "weight": 0 }
+    ],
+    "segment_rules": [
+      { "group": "variant_b", "require": { "country": ["US", "CA"], "min_level": 5 } },
+      { "group": "variant_x", "require": { "country": ["US"] } },
+      { "group": "variant_a", "require": { "min_level": 20, "max_level": 5 } },
+      { "group": "control",   "require": { "country": ["US", "CA"] } }
+    ],
+    "analytics_requirements": {
+      "exposure": { "required_properties": ["user_id", "group", "experiment_id", "ts", "ltv"] }
+    }
+  },
+  "economy": {
+    "currencies": ["coins"],
+    "starting_balance": { "coins": 10 },
+    "items": [
+      { "id": "sword", "cost": { "coins": 80 } }
+    ]
+  },
+  "defaults": {
+    "on_fetch_failure": "use_variant_b"
+  }
+}
