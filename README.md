@@ -1,5 +1,7 @@
 # tripwire
 
+[![ci](https://github.com/jemsonchan/Miniclip_Technical_Assignment/actions/workflows/ci.yml/badge.svg)](https://github.com/jemsonchan/Miniclip_Technical_Assignment/actions/workflows/ci.yml)
+
 **Config + runtime checks for live game experiments.** Point it at an
 experiment config and a captured event stream; it tells you whether the
 experiment is *configured* correctly and whether it's *behaving* correctly.
