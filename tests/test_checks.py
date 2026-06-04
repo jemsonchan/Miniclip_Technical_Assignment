@@ -193,5 +193,86 @@ class TestExitCodes(unittest.TestCase):
         self.assertTrue(cats <= {"static"}, f"--only static leaked categories: {cats}")
 
 
+class TestThresholdConfig(unittest.TestCase):
+    """Policy thresholds are tunable from the config, not hard-coded."""
+
+    def _cfg_with_split(self):
+        # A config + generated stream whose 50/50 split trips drift at default alpha.
+        cfg = load(os.path.join(EX, "example_config.json"))
+        events = gen.generate(cfg, n_users=3000, seed=1, inject=["drift"])
+        return cfg, events
+
+    def test_defaults_match_documented_values(self):
+        from tripwire.thresholds import Thresholds
+        t = Thresholds()
+        self.assertEqual(t.drift_min_sample, 200)
+        self.assertEqual(t.drift_alpha, 0.001)
+        self.assertAlmostEqual(t.missing_props_warn_frac, 0.02)
+        self.assertAlmostEqual(t.missing_props_error_frac, 0.10)
+
+    def test_raised_min_sample_silences_drift(self):
+        # Same drifted stream, but demand an impossibly large sample -> the check
+        # downgrades to INFO ("too small to judge") instead of ERROR.
+        cfg, events = self._cfg_with_split()
+        cfg["tripwire"] = {"thresholds": {"drift_min_sample": 10_000_000}}
+        ctx = Context(cfg, events)
+        drift = [f for f in run_all(ctx) if f.check_id == "dynamic.assignment_drift"]
+        self.assertEqual(len(drift), 1)
+        self.assertEqual(drift[0].severity, "INFO")
+
+    def test_unknown_and_bad_override_keys_are_ignored(self):
+        from tripwire.thresholds import Thresholds
+        t = Thresholds.from_config({"tripwire": {"thresholds": {
+            "drift_min_sample": "lots",   # wrong type -> ignored
+            "drift_alpha": True,          # bool -> ignored (not a real number here)
+            "nonsense_key": 5,            # unknown -> ignored
+            "missing_props_warn_frac": 0.5,  # valid -> applied
+        }}})
+        self.assertEqual(t.drift_min_sample, 200)      # default kept
+        self.assertEqual(t.drift_alpha, 0.001)         # default kept
+        self.assertAlmostEqual(t.missing_props_warn_frac, 0.5)  # applied
+
+
+class TestEconomyCache(unittest.TestCase):
+    def test_effective_economy_is_memoised_per_group(self):
+        cfg = load(os.path.join(EX, "example_config.json"))
+        ctx = Context(cfg, [])
+        first = ctx.effective_economy_for_group("control")
+        second = ctx.effective_economy_for_group("control")
+        self.assertIs(first, second, "expected the cached table to be reused")
+        # different group key is a different table
+        self.assertIsNot(first, ctx.effective_economy_for_group("variant_a"))
+
+
+class TestOrdering(unittest.TestCase):
+    """One canonical ordering contract for each renderer; both deterministic."""
+
+    def test_text_is_category_first_json_is_severity_first(self):
+        from tripwire.model import sort_findings, sort_findings_by_category
+        ids, findings = findings_for(
+            os.path.join(EX, "example_config.json"),
+            os.path.join(EX, "example_events.jsonl"),
+        )
+        cats = [f.category for f in sort_findings_by_category(findings)]
+        order = {"static": 0, "dynamic": 1, "forensic": 2}
+        self.assertEqual(cats, sorted(cats, key=lambda c: order[c]),
+                         "text ordering must be category-first")
+        sevs = [f.severity for f in sort_findings(findings)]
+        srank = {"ERROR": 0, "WARN": 1, "INFO": 2}
+        self.assertEqual(sevs, sorted(sevs, key=lambda s: srank[s]),
+                         "json ordering must be severity-first")
+
+    def test_orderings_are_stable_for_equal_keys(self):
+        # check_id is the final tie-break, so repeated sorts are identical.
+        from tripwire.model import sort_findings
+        _, findings = findings_for(
+            os.path.join(EX, "example_config.json"),
+            os.path.join(EX, "example_events.jsonl"),
+        )
+        a = [f.check_id for f in sort_findings(findings)]
+        b = [f.check_id for f in sort_findings(list(reversed(findings)))]
+        self.assertEqual(a, b)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

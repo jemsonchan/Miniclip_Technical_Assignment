@@ -1,0 +1,60 @@
+name: ci
+
+# The pre-merge gate from FINDINGS.md, realised. tripwire is stdlib-only, so this
+# needs no dependency install -- it stays cheap enough to be a required check.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Floor (README says 3.8+) through current.
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Unit suite
+        run: python -m tests.test_checks
+
+      - name: Package installs and exposes the console script
+        run: |
+          pip install -e .
+          tripwire --help
+
+      - name: Exit-code contract (the CI gate itself)
+        run: |
+          set +e  # we assert each exit code by hand
+          expect() {  # expect <wanted> <label>; reads $? captured by caller
+            if [ "$1" != "$2" ]; then
+              echo "::error::$3: expected exit $1, got $2"; exit 1
+            fi
+          }
+          python -m tripwire check --config examples/example_config.json --fail-on error
+          expect 0 "$?" "clean config"
+          python -m tripwire check --config examples/broken_economy_config.json --fail-on error
+          expect 1 "$?" "broken config must fail the gate"
+          python -m tripwire check --config examples/broken_economy_config.json --fail-on none
+          expect 0 "$?" "--fail-on none must never block"
+          python -m tripwire check --config does_not_exist.json
+          expect 2 "$?" "missing input"
+
+      - name: Determinism under hash randomization
+        run: |
+          a=$(PYTHONHASHSEED=0    python -m tripwire check --config examples/example_config.json \
+                --events examples/example_events.jsonl --json | md5sum)
+          b=$(PYTHONHASHSEED=9999 python -m tripwire check --config examples/example_config.json \
+                --events examples/example_events.jsonl --json | md5sum)
+          echo "seed0=$a seed9999=$b"
+          if [ "$a" != "$b" ]; then
+            echo "::error::output is not deterministic across PYTHONHASHSEED values"; exit 1
+          fi

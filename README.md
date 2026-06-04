@@ -75,6 +75,29 @@ python3 -m tripwire gen --config examples/example_config.json --out /tmp/big.jso
 python3 -m tripwire check --config examples/example_config.json --events /tmp/big.jsonl
 ```
 
+## Tuning & CI
+
+**Thresholds are config, not code.** The policy numbers (drift sample size and
+alpha, the missing-analytics WARN/ERROR fractions) live in `tripwire/thresholds.py`
+with documented defaults, and any of them can be overridden per-run from the
+config under a top-level `tripwire.thresholds` key — no code edit to retune noise:
+
+```json
+{
+  "experiment": { "...": "..." },
+  "tripwire": { "thresholds": { "drift_min_sample": 500, "drift_alpha": 0.0001 } }
+}
+```
+
+Unknown or non-numeric override keys are ignored, so a typo falls back to the
+default rather than crashing a run.
+
+**CI.** `.github/workflows/ci.yml` runs the unit suite on Python 3.8–3.12, asserts
+the exit-code contract (clean→0, broken→1, `--fail-on none`→0, bad input→2), and
+checks that output is byte-identical under two `PYTHONHASHSEED` values so latent
+set-ordering flakiness can't slip in. It's the pre-merge gate from `FINDINGS.md`,
+realised — and dependency-free, so it stays cheap.
+
 ## What I explicitly chose *not* to do
 
 - **No schema/type validator.** The loader stays permissive on purpose — strict
@@ -100,7 +123,8 @@ python3 -m tripwire check --config examples/example_config.json --events /tmp/bi
 3. **A `--baseline` mode** so the tool can run pre-merge (static only) and
    post-release (full) from the same entry point in CI.
 4. **Per-check config** (thresholds, allow-lists, suppressions) so teams can
-   tune noise without editing code.
+   tune noise without editing code. *(Thresholds are now done — see
+   "Tuning & CI" above; allow-lists/suppressions are the remaining piece.)*
 
 ## Assumptions (made a call, documented it, moved on)
 

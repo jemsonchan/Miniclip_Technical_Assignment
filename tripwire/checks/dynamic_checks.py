@@ -13,38 +13,36 @@ from . import register
 
 C = CATEGORY_DYNAMIC
 
-# Below this many assigned users, distribution drift is statistically
-# meaningless -- the brief warns the sample is tiny. We say so rather than cry
-# wolf. Use the generator to produce a stream large enough to trip this.
-MIN_SAMPLE_FOR_DRIFT = 200
-# p-value threshold for declaring drift. 0.001 keeps false alarms rare on a
-# check that runs continuously in production.
-DRIFT_ALPHA = 0.001
+# Policy thresholds (drift sample size & alpha, missing-analytics fractions) now
+# live in tripwire/thresholds.py and are read from ctx.thresholds, so a team can
+# retune them from the config without editing this file. See that module.
 
 
 @register("dynamic.assignment_drift", C)
 def assignment_drift(ctx: Context) -> List[Finding]:
     if not ctx.weights:
         return []
+    min_sample = ctx.thresholds.drift_min_sample
+    alpha = ctx.thresholds.drift_alpha
     observed = ctx.assignment_counts()
     total = sum(observed.values())
-    if total < MIN_SAMPLE_FOR_DRIFT:
+    if total < min_sample:
         return [
             Finding(
                 "dynamic.assignment_drift", C, INFO,
                 "Not enough exposures to judge assignment drift",
-                f"Only {total} assigned users; need >= {MIN_SAMPLE_FOR_DRIFT} for a "
+                f"Only {total} assigned users; need >= {min_sample} for a "
                 f"trustworthy chi-square. Observed split so far: {observed}.",
                 evidence=[observed],
             )
         ]
     chi, df, p, expected = chi_square_gof(observed, ctx.weights)
-    if p < DRIFT_ALPHA:
+    if p < alpha:
         return [
             Finding(
                 "dynamic.assignment_drift", C, ERROR,
                 "Group assignment has drifted from configured weights",
-                f"chi-square={chi:.1f}, df={df}, p={p:.2e} (< {DRIFT_ALPHA}). "
+                f"chi-square={chi:.1f}, df={df}, p={p:.2e} (< {alpha}). "
                 f"Observed {observed} vs expected ~{ {k: round(v, 1) for k, v in expected.items()} }. "
                 f"The bucketing layer is not honouring the weights -- a hashing/rounding bug or a "
                 f"stale config rollout is the usual cause.",
@@ -175,7 +173,8 @@ def missing_analytics_props(ctx: Context) -> List[Finding]:
     if not reqs:
         return []
     out = []
-    THRESHOLD = 0.02  # >2% missing is "non-trivial"
+    warn_frac = ctx.thresholds.missing_props_warn_frac    # > this -> WARN
+    error_frac = ctx.thresholds.missing_props_error_frac  # > this -> ERROR
     buckets = {"exposure": ctx.exposures, "economy_transaction": ctx.transactions}
     for etype, evs in buckets.items():
         required = (reqs.get(etype, {}) or {}).get("required_properties", []) or []
@@ -184,8 +183,8 @@ def missing_analytics_props(ctx: Context) -> List[Finding]:
         for prop in required:
             missing = [e for e in evs if e.get(prop) in (None, "")]
             frac = len(missing) / len(evs)
-            if frac > THRESHOLD:
-                sev = ERROR if frac > 0.10 else WARN
+            if frac > warn_frac:
+                sev = ERROR if frac > error_frac else WARN
                 out.append(
                     Finding(
                         "dynamic.missing_analytics_props", C, sev,

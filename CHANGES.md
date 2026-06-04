@@ -52,8 +52,49 @@ Suite went from 10 → 18 tests, all passing.
 - Added a minimal `pyproject.toml` so `pip install -e .` and a `tripwire` console
   entry point work (was `python3 -m tripwire` only).
 
-## Not done (deliberately — larger scope / judgment calls)
+---
 
-Documented as recommendations in `TEST_RESULTS.md` §6 rather than applied:
-lifting hard-coded thresholds into config, caching the per-group economy table,
-unifying text/JSON ordering, and adding a CI workflow.
+# Round 2 — the four larger recommendations
+
+The four items previously left as recommendations are now implemented.
+Detection behaviour is unchanged: the example report is byte-identical before
+and after (same `--json` MD5), and determinism under `PYTHONHASHSEED` holds.
+
+### 1. Thresholds lifted into config (`tripwire/thresholds.py`, new)
+Policy numbers — drift sample size & alpha, missing-analytics WARN/ERROR
+fractions — moved out of check bodies into a frozen `Thresholds` dataclass with
+documented defaults. `Context` builds it via `Thresholds.from_config`, overlaying
+numeric overrides from a top-level `tripwire.thresholds` config key. Unknown or
+non-numeric keys are ignored (a typo can't crash a run). `dynamic_checks.py` now
+reads `ctx.thresholds.*` instead of module constants.
+
+### 2. Per-group economy table cached (`tripwire/model.py`)
+`effective_economy_for_group` memoises its merged base+override table per group
+in `Context._economy_cache`. `transaction_mismatch` calls it once per
+transaction; it now builds each group's table once. Result is documented
+read-only (every caller already treats it so).
+
+### 3. Unified ordering contract (`tripwire/model.py`, `tripwire/cli.py`)
+The two finding orderings are now named, documented functions defined once:
+`sort_findings` (severity-first, for JSON) and `sort_findings_by_category`
+(category-first, for the text report). Both tie-break on `check_id` for
+determinism. `cli.py` no longer carries its own duplicated `_RANK`/`_CAT_ORDER`
+sort keys — it imports `_SEVERITY_ORDER` and the sorters from `model`, so text
+and JSON can't silently diverge. (Minor, intended: JSON's secondary tie-break is
+now the logical category order — static→dynamic→forensic — instead of
+alphabetical; the example output is unaffected.)
+
+### 4. CI workflow (`.github/workflows/ci.yml`, new)
+Runs on push to `main` and on PRs, Python 3.8–3.12: unit suite, `pip install -e .`
++ console-script smoke, the exit-code contract (clean→0, broken→1,
+`--fail-on none`→0, bad input→2), and a determinism gate comparing `--json` MD5
+across two `PYTHONHASHSEED` values. Dependency-free, so it's cheap enough to be a
+required check — the pre-merge gate from `FINDINGS.md`, realised.
+
+### Tests
+Added `TestThresholdConfig`, `TestEconomyCache`, `TestOrdering` (6 cases).
+Suite 18 → **24**, all green.
+
+### Docs
+`README.md` gains a "Tuning & CI" section and marks the per-check-config item
+partially done. `TEST_RESULTS.md` §6 updated.

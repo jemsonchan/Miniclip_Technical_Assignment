@@ -19,6 +19,8 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from .thresholds import Thresholds
+
 
 # Severity ladder. ERROR is the CI gate -- its presence sets a non-zero exit
 # code. WARN is "a human should look before this ships". INFO is context the
@@ -115,6 +117,9 @@ class Context:
         self.experiment: dict = self.config.get("experiment", {}) or {}
         self.economy: dict = self.config.get("economy", {}) or {}
         self.defaults: dict = self.config.get("defaults", {}) or {}
+        # Tunable policy thresholds (drift sample size, missing-analytics
+        # fractions, ...), defaulted here and overridable from the config.
+        self.thresholds: Thresholds = Thresholds.from_config(self.config)
 
         # --- config-derived views ---
         self.groups: List[dict] = self.experiment.get("groups", []) or []
@@ -158,10 +163,22 @@ class Context:
             for uid, evs in self.by_user.items()
         }
 
+        # Memo for effective_economy_for_group: the merged base+override table is
+        # the same for every transaction of a given group, so build it once per
+        # group. transaction_mismatch calls this once per transaction.
+        self._economy_cache: Dict[Optional[str], Dict[str, dict]] = {}
+
     # ---- helpers shared by checks ----
 
     def effective_economy_for_group(self, group_id: Optional[str]) -> Dict[str, dict]:
-        """Item table for a group, applying per-group overrides over the base."""
+        """Item table for a group, applying per-group overrides over the base.
+
+        Cached per group_id. Callers must treat the result as read-only (every
+        caller does); mutating it would corrupt the shared copy.
+        """
+        cached = self._economy_cache.get(group_id)
+        if cached is not None:
+            return cached
         base = {it.get("id"): it for it in self.economy.get("items", []) or [] if isinstance(it, dict)}
         merged = {k: dict(v) for k, v in base.items()}
         overrides = (self.economy.get("per_group_overrides", {}) or {}).get(group_id, {}) or {}
@@ -169,6 +186,7 @@ class Context:
             merged.setdefault(item_id, {"id": item_id})
             for k, v in (ov or {}).items():
                 merged[item_id][k] = v
+        self._economy_cache[group_id] = merged
         return merged
 
     def first_exposure_group(self, uid: str) -> Optional[str]:
@@ -184,8 +202,30 @@ class Context:
         return counts
 
 
+# Canonical finding orderings, defined once so the text and JSON renderers can
+# never silently diverge. There are deliberately two -- they answer different
+# questions -- but both live here and both fall back to check_id as the final
+# tie-break, which is what makes output deterministic across runs and machines:
+#   * by-severity: most-severe first, for machine triage / JSON consumers.
+#   * by-category: grouped by layer (static -> dynamic -> forensic), for a human
+#     reading the report top-to-bottom.
+CATEGORY_ORDER = {CATEGORY_STATIC: 0, CATEGORY_DYNAMIC: 1, CATEGORY_FORENSIC: 2}
+
+
 def sort_findings(findings: List[Finding]) -> List[Finding]:
+    """Severity-first ordering (ERROR -> WARN -> INFO). Used for JSON output."""
     return sorted(
         findings,
-        key=lambda f: (_SEVERITY_ORDER.get(f.severity, 9), f.category, f.check_id),
+        key=lambda f: (_SEVERITY_ORDER.get(f.severity, 9),
+                       CATEGORY_ORDER.get(f.category, 9), f.check_id),
+    )
+
+
+def sort_findings_by_category(findings: List[Finding]) -> List[Finding]:
+    """Category-first ordering (static -> dynamic -> forensic, severity within).
+    Used for the human-readable text report."""
+    return sorted(
+        findings,
+        key=lambda f: (CATEGORY_ORDER.get(f.category, 9),
+                       _SEVERITY_ORDER.get(f.severity, 9), f.check_id),
     )

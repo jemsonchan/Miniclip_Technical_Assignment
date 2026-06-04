@@ -16,7 +16,7 @@ conditions?).
 
 | Aspect | Result |
 |--------|--------|
-| Unit test suite | ✅ PASS (10 original → **18** after fix), 0 flakes across repeated runs |
+| Unit test suite | ✅ PASS (10 original → **24** after fix + refactors), 0 flakes across repeated runs |
 | Documented CLI workflows (README) | ✅ All run as advertised |
 | Determinism / flakiness | ✅ Byte-identical output across runs **and** under `PYTHONHASHSEED` randomization |
 | Exit-code contract | 🐞 → ✅ `--fail-on none` was inverted; **fixed** + regression-tested |
@@ -150,16 +150,21 @@ is preserved.
 
 ---
 
-## 6. Further optimization ideas (not yet applied — judgment calls / larger scope)
+## 6. Further optimization — all four now applied (see CHANGES.md "Round 2")
 
-- **Lift hard-coded thresholds** (2%/10% missing-analytics, ≥200 drift sample,
-  p<0.001) into one `THRESHOLDS` table or per-check config, so teams tune noise
-  without editing logic. The README already flags this as a day-2 item.
-- **Cache the base economy item table** in `effective_economy_for_group` (rebuilt
-  per call today) if a check ever iterates groups × items on large configs.
-- **Unify finding ordering**: text output sorts category-first, JSON
-  severity-first. Intentional, but worth a single documented ordering contract so
-  the two can't silently diverge.
-- **CI**: a GitHub Actions workflow running the suite + the two broken configs
-  would make the exit-code contract a required status check (the FINDINGS.md
-  pre-merge gate, realised).
+These were initially left as recommendations; they have since been implemented,
+with detection behaviour unchanged (byte-identical example report, determinism
+preserved) and the suite grown to **24 tests**:
+
+- ✅ **Thresholds lifted into config** — `tripwire/thresholds.py`, overridable
+  from a `tripwire.thresholds` config key; checks read `ctx.thresholds.*`.
+- ✅ **Per-group economy table cached** in `Context` (memoised per group).
+- ✅ **Unified ordering contract** — two named, documented sorters in `model.py`
+  (`sort_findings` severity-first for JSON; `sort_findings_by_category` for text),
+  with `cli.py` no longer duplicating sort keys.
+- ✅ **CI workflow** — `.github/workflows/ci.yml`: suite on 3.8–3.12, exit-code
+  contract, and a `PYTHONHASHSEED` determinism gate.
+
+Remaining day-2 items (still open, by design): allow-lists/suppressions on top of
+the now-configurable thresholds; `--baseline` mode; config-evolution diffing;
+SRM as a continuously-running alert.

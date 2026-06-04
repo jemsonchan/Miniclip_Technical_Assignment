@@ -16,7 +16,8 @@ import json
 import sys
 
 from .model import (
-    Context, LoadResult, load_config, load_events, sort_findings,
+    Context, LoadResult, load_config, load_events,
+    sort_findings, sort_findings_by_category, _SEVERITY_ORDER,
     ERROR, WARN, INFO,
     CATEGORY_STATIC, CATEGORY_DYNAMIC, CATEGORY_FORENSIC,
 )
@@ -25,8 +26,6 @@ from . import generate as gen
 
 _COLOR = {ERROR: "\033[91m", WARN: "\033[93m", INFO: "\033[96m"}
 _RESET = "\033[0m"
-_RANK = {ERROR: 0, WARN: 1, INFO: 2}
-_CAT_ORDER = {CATEGORY_STATIC: 0, CATEGORY_DYNAMIC: 1, CATEGORY_FORENSIC: 2}
 _CATEGORIES = {CATEGORY_STATIC, CATEGORY_DYNAMIC, CATEGORY_FORENSIC}
 
 
@@ -54,10 +53,7 @@ def render_text(findings, ctx, use_color: bool, n_checks_run: int = None) -> str
         lines.append("\nNo issues found. (That is not the same as 'correct' -- see README on coverage.)")
         return "\n".join(lines)
 
-    ordered = sorted(
-        findings,
-        key=lambda f: (_CAT_ORDER.get(f.category, 9), _RANK.get(f.severity, 9), f.check_id),
-    )
+    ordered = sort_findings_by_category(findings)
     last_cat = None
     for f in ordered:
         if f.category != last_cat:
@@ -128,8 +124,8 @@ def cmd_check(args) -> int:
     # -1, NOT a large number -- every real severity (0,1,2) is <= any large
     # sentinel, which would make "none" fail on everything (the opposite of its
     # purpose as the report-but-never-block mode).
-    threshold = {"error": _RANK[ERROR], "warn": _RANK[WARN], "none": -1}[args.fail_on]
-    worst = min((_RANK[f.severity] for f in findings), default=99)
+    threshold = {"error": _SEVERITY_ORDER[ERROR], "warn": _SEVERITY_ORDER[WARN], "none": -1}[args.fail_on]
+    worst = min((_SEVERITY_ORDER[f.severity] for f in findings), default=99)
     return 1 if worst <= threshold else 0
 
 
